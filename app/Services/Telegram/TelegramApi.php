@@ -50,6 +50,20 @@ class TelegramApi
         return $response->json('result', []);
     }
 
+    public function copyMessage(int|string $chatId, int|string $fromChatId, int $messageId): array
+    {
+        $response = Http::timeout(15)
+            ->post($this->endpoint('copyMessage'), [
+                'chat_id' => $chatId,
+                'from_chat_id' => $fromChatId,
+                'message_id' => $messageId,
+            ]);
+
+        $response->throw();
+
+        return $response->json('result', []);
+    }
+
     private function endpoint(string $method): string
     {
         return "https://api.telegram.org/bot{$this->token}/{$method}";

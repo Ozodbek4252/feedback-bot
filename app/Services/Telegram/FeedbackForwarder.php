@@ -22,6 +22,12 @@ class FeedbackForwarder
 
     public function handle(array $message): void
     {
+        if ($this->isFromTargetGroup($message)) {
+            $this->relayGroupReplyToUser($message);
+
+            return;
+        }
+
         $feedback = FeedbackMessage::firstOrNew([
             'bot' => $this->botSlug,
             'telegram_message_id' => $message['message_id'],
@@ -72,6 +78,41 @@ class FeedbackForwarder
             ]);
         } catch (Throwable $e) {
             Log::error("Failed to forward Telegram feedback message [{$this->botSlug}] #{$feedback->id}: {$e->getMessage()}");
+        }
+    }
+
+    private function isFromTargetGroup(array $message): bool
+    {
+        $targetChatId = (string) ($this->botConfig['chat_id'] ?? '');
+
+        return $targetChatId !== '' && (string) $message['chat']['id'] === $targetChatId;
+    }
+
+    private function relayGroupReplyToUser(array $message): void
+    {
+        $replyToId = $message['reply_to_message']['message_id'] ?? null;
+
+        if (! $replyToId) {
+            return;
+        }
+
+        $original = FeedbackMessage::query()
+            ->where('bot', $this->botSlug)
+            ->where('forwarded_message_id', $replyToId)
+            ->first();
+
+        if (! $original) {
+            return;
+        }
+
+        try {
+            $this->api->copyMessage(
+                $original->telegram_chat_id,
+                $message['chat']['id'],
+                $message['message_id'],
+            );
+        } catch (Throwable $e) {
+            Log::error("Failed to relay group reply back to user for bot [{$this->botSlug}]: {$e->getMessage()}");
         }
     }
 
