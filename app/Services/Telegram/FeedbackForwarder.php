@@ -60,8 +60,6 @@ class FeedbackForwarder
         }
 
         try {
-            $this->api->sendMessage($chatId, $this->attributionLine($feedback));
-
             $forwarded = $this->api->forwardMessage(
                 $chatId,
                 $feedback->telegram_chat_id,
@@ -75,15 +73,6 @@ class FeedbackForwarder
         } catch (Throwable $e) {
             Log::error("Failed to forward Telegram feedback message [{$this->botSlug}] #{$feedback->id}: {$e->getMessage()}");
         }
-    }
-
-    private function attributionLine(FeedbackMessage $feedback): string
-    {
-        $name = trim("{$feedback->telegram_first_name} {$feedback->telegram_last_name}");
-        $handle = $feedback->telegram_username ? "@{$feedback->telegram_username}" : "id:{$feedback->telegram_user_id}";
-        $appName = $this->botConfig['name'] ?? ucfirst($this->botSlug);
-
-        return "📥 {$appName} — {$name} ({$handle})";
     }
 
     private function resolveType(array $message): string
