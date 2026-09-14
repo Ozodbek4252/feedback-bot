@@ -49,6 +49,22 @@ services:
         command: ["php", "artisan", "schedule:work"]
         restart: unless-stopped
 
+    telegram-poller-shelf:
+        image: feedback-bot:latest
+        env_file:
+            - .env
+        environment:
+            AUTO_MIGRATE: "false"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+            app:
+                condition: service_started
+        command: ["php", "artisan", "telegram:poll", "shelf"]
+        restart: unless-stopped
+
     postgres:
         image: postgres:17-alpine
         environment:
