@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      target: app
+    image: feedback-bot:latest
+    ports:
+      - "${APP_PORT:-8080}:80"
+    env_file:
+      - .env
+    environment:
+      AUTO_MIGRATE: "true"
+    volumes:
+      - storage:/var/www/html/storage
+      - database:/var/www/html/database
+    restart: unless-stopped
+
+  queue:
+    image: feedback-bot:latest
+    depends_on:
+      - app
+    env_file:
+      - .env
+    environment:
+      AUTO_MIGRATE: "false"
+    volumes:
+      - storage:/var/www/html/storage
+      - database:/var/www/html/database
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3"]
+    restart: unless-stopped
+
+  scheduler:
+    image: feedback-bot:latest
+    depends_on:
+      - app
+    env_file:
+      - .env
+    environment:
+      AUTO_MIGRATE: "false"
+    volumes:
+      - storage:/var/www/html/storage
+      - database:/var/www/html/database
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+
+volumes:
+  storage:
+  database:
