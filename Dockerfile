@@ -27,20 +27,21 @@ RUN apk add --no-cache nginx supervisor \
         libzip-dev \
         oniguruma-dev \
         sqlite-dev \
+        postgresql-dev \
         libpng-dev \
         freetype-dev \
         libjpeg-turbo-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_sqlite \
-        pdo_mysql \
+        pdo_pgsql \
         bcmath \
         intl \
         zip \
         gd \
         pcntl \
         exif \
-    && apk add --no-cache icu-libs libzip sqlite-libs libpng freetype libjpeg-turbo \
+    && apk add --no-cache icu-libs libzip sqlite-libs libpq libpng freetype libjpeg-turbo \
     && apk del .build-deps \
     && rm -rf /var/cache/apk/*
 

@@ -5,7 +5,7 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-if [ ! -f database/database.sqlite ]; then
+if [ "$DB_CONNECTION" = "sqlite" ] && [ ! -f database/database.sqlite ]; then
     touch database/database.sqlite
 fi
 

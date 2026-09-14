@@ -1,48 +1,84 @@
 services:
-  app:
-    build:
-      context: .
-      target: app
-    image: feedback-bot:latest
-    ports:
-      - "${APP_PORT:-8080}:80"
-    env_file:
-      - .env
-    environment:
-      AUTO_MIGRATE: "true"
-    volumes:
-      - storage:/var/www/html/storage
-      - database:/var/www/html/database
-    restart: unless-stopped
+    app:
+        build:
+            context: .
+            target: app
+        image: feedback-bot:latest
+        ports:
+            - "${APP_PORT:-8080}:80"
+        env_file:
+            - .env
+        environment:
+            AUTO_MIGRATE: "true"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: unless-stopped
 
-  queue:
-    image: feedback-bot:latest
-    depends_on:
-      - app
-    env_file:
-      - .env
-    environment:
-      AUTO_MIGRATE: "false"
-    volumes:
-      - storage:/var/www/html/storage
-      - database:/var/www/html/database
-    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3"]
-    restart: unless-stopped
+    queue:
+        image: feedback-bot:latest
+        env_file:
+            - .env
+        environment:
+            AUTO_MIGRATE: "false"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+            app:
+                condition: service_started
+        command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3"]
+        restart: unless-stopped
 
-  scheduler:
-    image: feedback-bot:latest
-    depends_on:
-      - app
-    env_file:
-      - .env
-    environment:
-      AUTO_MIGRATE: "false"
-    volumes:
-      - storage:/var/www/html/storage
-      - database:/var/www/html/database
-    command: ["php", "artisan", "schedule:work"]
-    restart: unless-stopped
+    scheduler:
+        image: feedback-bot:latest
+        env_file:
+            - .env
+        environment:
+            AUTO_MIGRATE: "false"
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+            app:
+                condition: service_started
+        command: ["php", "artisan", "schedule:work"]
+        restart: unless-stopped
+
+    postgres:
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-feedback_bot}
+            POSTGRES_USER: ${DB_USERNAME:-feedback_bot}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${DB_USERNAME:-feedback_bot} -d ${DB_DATABASE:-feedback_bot}",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: unless-stopped
+
+    adminer:
+        image: adminer:latest
+        environment:
+            ADMINER_DEFAULT_SERVER: postgres
+            ADMINER_DESIGN: pepa-linha
+        ports:
+            - "${ADMINER_PORT:-8081}:8080"
+        depends_on:
+            - postgres
+        restart: unless-stopped
 
 volumes:
-  storage:
-  database:
+    storage:
+    pgdata:
